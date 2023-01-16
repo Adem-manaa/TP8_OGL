@@ -1,60 +1,84 @@
-//////
 pipeline {
-    agent any
-    stages {
-        stage ('test') { // la phase build is
-            steps {
-                bat 'gradle test'
-                archiveArtifacts 'build/test-results/'
-                cucumber reportTitle: 'Cucumber report',
+  agent any
+  stages {
+
+   stage ('Test') { // la phase build
+steps {
+bat 'gradle test'
+ junit 'build/test-results/test/TEST-Matrix.xml'
+
+   cucumber buildStatus: 'UNSTABLE',
+                reportTitle: 'My report',
                 fileIncludePattern: 'target/report.json',
-                trendsLimit: 10,
 
-                junit 'build/test-results/test/TEST-Matrix.xml'
-            }
-         }
+                trendsLimit: 10
 
-          stage ('Code Analysis') { // la phase build
-            steps {
-                                withSonarQubeEnv('sonar'){
-                bat 'gradle sonarqube'
-                                }
+}
+}
+
+
+        stage('Code Analysis') {
+          steps {
+            withSonarQubeEnv('sonar') {
+              bat 'gradle sonarQube'
             }
-         }
-          stage("Quality gate") {
-            steps {
-                waitForQualityGate abortPipeline: true
-            }
+
+
+          }
         }
-                  stage("Build") {
-            steps {
-                bat 'gradle build'
-                bat 'gradle javadoc'
-                archiveArtifacts 'build/libs/*.jar'
-                archiveArtifacts 'build/docs/'
-            }
-        }
-             stage("deploy") {
-            steps {
-                bat 'gradle publish'
 
-            }
-        }
-                         stage("notification") {
-            steps {
-                 notifyEvents message: 'Pipeline <b> is sucessufuly termined</b>', token: 'PY3Y9jJQuN-cnl4BlZV44K7bzlpd1OQg'
 
+         stage("Code Quality") {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    // Parameter indicates whether to set pipeline to UNSTABLE if Quality Gate fails
+                    // true = set pipeline to UNSTABLE, false = don't
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
 
+
+     stage('build') {
+
+
+      steps {
+        bat(script: 'gradle build', label: 'gradle build')
+        bat 'gradle javadoc'
+        archiveArtifacts 'build/libs/*.jar'
+        junit(testResults: 'build/reports/tests/test', allowEmptyResults: true)
+
+      }
     }
-            post {
 
-        failure {
-            mail bcc: '', body: '''process Failed!!!!
-Sorry adam''', cc: '', from: '', replyTo: '', subject: 'process Faild', to: 'ja_manaa@esi.dz'
-        }
+     stage('Deploy') {
+      steps {
+        bat 'gradle publish'
+      }
+    }
+
+     stage('Notification') {
+      steps {
+
+       notifyEvents message: 'New build is Created success', token: 'PY3Y9jJQuN-cnl4BlZV44K7bzlpd1OQg'
+
+
+      }
+    }
+
+
 
 }
 
-    }
+  post {
+
+        failure {
+               notifyEvents message: "the new build isn't deployed succesfully !", token: 'PY3Y9jJQuN-cnl4BlZV44K7bzlpd1OQg'
+
+        }
+
+      }
+
+ }
+
+
