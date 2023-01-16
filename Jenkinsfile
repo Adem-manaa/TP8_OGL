@@ -68,14 +68,7 @@ bat 'gradle test'
 
 }
 
-  post {
 
-        failure {
-               notifyEvents message: "the new build isn't deployed succesfully !", token: 'PY3Y9jJQuN-cnl4BlZV44K7bzlpd1OQg'
-
-        }
-
-      }
 
  }
 
