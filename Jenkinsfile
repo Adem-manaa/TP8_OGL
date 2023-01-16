@@ -1,132 +1,84 @@
 pipeline {
   agent any
   stages {
-    stage ('test') { // la phase test
-            post {
-        failure {
-          script {
-            mail= " test termine avec echec "
-          }
-
-        }
-
-        success {
-          script {
-            mail=" test termine avec succes "
-          }
-
-        }
-
-      }
+   
+   stage ('Test') { // la phase build
 steps {
-   bat 'gradle test'
-   junit 'build/test-results/test/TEST-Matrix.xml'
-          cucumber buildStatus: 'UNSTABLE',
+bat 'gradlew test'
+ junit 'build/test-results/test/TEST-Matrix.xml'
+ 
+   cucumber buildStatus: 'UNSTABLE',
                 reportTitle: 'My report',
-                fileIncludePattern: 'target/*.json',
-                trendsLimit: 10
-  
-}
-    }
-            stage('test Mail Notification') {
-      steps {
-        mail(subject: 'TPOGL Jenkins test phase notification', body: mail, cc: 'ja_manaa@esi.dz' ,bcc:'ja_manaa@esi.dz')
-      }
-    }
-    
+                fileIncludePattern: 'target/report.json',
      
+                trendsLimit: 10
+
+}
+}
+   
+   
         stage('Code Analysis') {
-                post {
-        failure {
-          script {
-            mail= " Code Analysis termine avec echec "
-          }
-
-        }
-
-        success {
-          script {
-            mail=" Code analysis termine avec succes "
-          }
-
-        }
-
-      }
-          
           steps {
             withSonarQubeEnv('sonar') {
-              bat 'gradle sonarQube'
+              bat 'gradle sonar'
             }
 
-            waitForQualityGate true
+
           }
         }
-            stage('analysis Mail Notification') {
+   
+   
+         stage("Code Quality") {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    // Parameter indicates whether to set pipeline to UNSTABLE if Quality Gate fails
+                    // true = set pipeline to UNSTABLE, false = don't
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+   
+   
+     stage('build') {
+     
+   
       steps {
-        mail(subject: 'TPOGL Jenkins analysis phase notification', body: mail, cc: 'ja_manaa@esi.dz' ,bcc:'ja_manaa@esi.dz')
-      }
-    }
-       stage('Build') {
-               post {
-        failure {
-          script {
-            mail= " Build termine avec echec "
-          }
-
-        }
-
-        success {
-          script {
-            mail=" Build termine avec succes "
-          }
-
-        }
-
-      }
-      steps {
-        bat 'gradle build'
+        bat(script: 'gradle build', label: 'gradle build')
         bat 'gradle javadoc'
         archiveArtifacts 'build/libs/*.jar'
-        archiveArtifacts 'build/docs/javadoc/**'
+        junit(testResults: 'build/reports/tests/test', allowEmptyResults: true)
+       
       }
     }
-            stage(' build Mail Notification') {
-      steps {
-        mail(subject: 'TPOGL Jenkins build phase notification', body: mail, cc: 'ja_manaa@esi.dz' ,bcc:'ja_manaa@esi.dz')
-      }
-    }
-        stage('Deployment') {
-                post {
-        failure {
-          script {
-            mail= " Deployement terminé avec échec "
-          }
-
-        }
-
-        success {
-          script {
-            mail=" Deployement termine avec succes "
-          }
-
-        }
-
-      }
+   
+     stage('Deploy') {
       steps {
         bat 'gradle publish'
       }
     }
-        stage(' deploy Mail Notification') {
+   
+     stage('Notification') {
       steps {
-        mail(subject: 'TPOGL Jenkins notification', body: mail, cc: 'ja_manaa@esi.dz' ,bcc:'ja_manaa@esi.dz')
-      }
-    }
-      stage('Slack Notification') {
-      steps {
-        slackSend(message: 'Slack vous indique que le processus est termine avec succes. ')
+       
+       notifyEvents message: 'New build is Created success', token: 'PY3Y9jJQuN-cnl4BlZV44K7bzlpd1OQg'
+
+
       }
     }
    
-}//stages
+   
+   
+   
+   
+   
+}
+ 
+  post {
 
-}//pipeline
+        failure {
+          mail(subject: 'Build Failure', body: "the new build isn't deployed succesfully !", from: 'ja_manaa@esi.dz', to: 'ja_manaa@esi.dz')
+        }
+       
+      }
+
+ }
