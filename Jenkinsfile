@@ -76,7 +76,8 @@ bat 'gradlew test'
   post {
 
         failure {
-          mail(subject: 'Build Failure', body: "the new build isn't deployed succesfully !", from: 'ja_manaa@esi.dz', to: 'ja_manaa@esi.dz')
+               notifyEvents message: "the new build isn't deployed succesfully !", token: 'PY3Y9jJQuN-cnl4BlZV44K7bzlpd1OQg'
+
         }
        
       }
