@@ -69,6 +69,15 @@ bat 'gradle test'
 
 
 }
+  post {
+        success {
+          mail(subject: 'Build Success', body: 'New Build is deployed !', from: 'ja_manaa@esi.dz', to: 'ja_manaa@esi.dz')
+        }
+        failure {
+          mail(subject: 'Build Failure', body: "the new build isn't deployed succesfully !", from: 'ja_manaa@esi.dz', to: 'ja_manaa@esi.dz')
+        }
+       
+      }
 
 
 
